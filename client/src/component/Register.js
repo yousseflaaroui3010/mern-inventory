@@ -14,7 +14,7 @@ const Register = () => {
 
   const handleSubmit = e => {
     e.preventDefault()
-
+    console.log("Registering with:", username, email, password);
     dispatch(register({ username, email, password }))
   }
 
@@ -27,16 +27,16 @@ const Register = () => {
         <form onSubmit={e => handleSubmit(e)}>
           <div className="form-group">
             <label htmlFor="username">Username</label>
-            <input type="text" name="username" className="form-control" value={username} onChange={e => setUsername(e.target.username)} />
+            <input type="text" name="username" className="form-control" value={username} onChange={e => setUsername(e.target.value)} />
           </div>
           <div className="form-group">
             <label htmlFor="email">Email address</label>
-            <input type="email" name="email" className="form-control" aria-describedby="emailHelp" value={email} onChange={e => setEmail(e.target.email)} />
+            <input type="email" name="email" className="form-control" aria-describedby="emailHelp" value={email} onChange={e => setEmail(e.target.value)} />
             <small id="emailHelp" className="form-text text-muted">We'll never share your email with anyone else.</small>
           </div>
           <div className="form-group">
             <label htmlFor="password">Password</label>
-            <input type="password" name="password" className="form-control" value={password} onChange={e => setPassword(e.target.password)} />
+            <input type="password" name="password" className="form-control" value={password} onChange={e => setPassword(e.target.value)} />
           </div>
           <button type="submit" className="btn btn-primary btn-block">Submit</button>
         </form>

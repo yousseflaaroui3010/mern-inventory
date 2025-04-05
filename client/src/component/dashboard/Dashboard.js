@@ -18,9 +18,9 @@ const Dashboard = () => {
   const dispatch = useDispatch()
 
   const makeFirstLetterCapital = str => {
+    if (!str) return '';
     const withoutFirstLetter = str.substring(1);
     const updated = str.charAt(0).toUpperCase().concat(withoutFirstLetter);
-
     return updated;
   }
 
@@ -29,8 +29,8 @@ const Dashboard = () => {
       <div className='dashboard'>
         <div className='sidebar'>
           <div className='sidebar__welcome'>
-            Welcome, {makeFirstLetterCapital(auth.user.username)}!
-            </div>
+            Welcome, {auth.user && auth.user.username ? makeFirstLetterCapital(auth.user.username) : 'User'}!
+          </div>
           <ul className='sidebar__list'>
             <li className='sidebar__item'><Link className='sidebar__link' to='/dashboard'>
               <BoxImg fill="#eee" />

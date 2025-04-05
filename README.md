@@ -11,7 +11,7 @@ Account details:
 - Password: 123456
 
 ## Technology
-This project uses the following technologies:  j
+This project uses the following technologies:  
 
 - **Front-end**: React, React Router, Redux, Sass
 

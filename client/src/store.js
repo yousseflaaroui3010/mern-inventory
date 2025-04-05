@@ -12,6 +12,7 @@ function saveToLocalStore(state) {
     console.log(error)
   }
 }
+
 function loadFromLocalStore() {
   try {
     const serializedState = localStorage.getItem('state')
@@ -25,9 +26,12 @@ function loadFromLocalStore() {
 
 const persistedState = loadFromLocalStore()
 
-const store = process.env.NODE_ENV === 'production' ?
-  createStore(rootReducer, persistedState, compose(applyMiddleware(...middleware))) :
-  createStore(rootReducer, persistedState, compose(applyMiddleware(...middleware), window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()))
+// Simplified store creation to avoid Redux DevTools issues
+const store = createStore(
+  rootReducer, 
+  persistedState, 
+  compose(applyMiddleware(...middleware))
+);
 
 store.subscribe(() => {
   saveToLocalStore(store.getState())

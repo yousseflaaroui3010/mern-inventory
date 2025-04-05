@@ -13,7 +13,7 @@ const Login = () => {
 
   const handleSubmit = e => {
     e.preventDefault()
-
+    console.log("Login attempt with:", email, password);
     dispatch(login({ email, password }))
   }
 
