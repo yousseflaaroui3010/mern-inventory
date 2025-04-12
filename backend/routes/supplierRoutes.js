@@ -24,4 +24,10 @@ router.put('/:id', protect, authorize('admin', 'manager'), updateSupplier);
 // Delete supplier
 router.delete('/:id', protect, authorize('admin'), deleteSupplier);
 
+
+router.get('/', (req, res) => {
+    res.json({ message: 'Supplier routes working' });
+  });
+
+  
 module.exports = router;

@@ -121,4 +121,207 @@ const ProductList = () => {
         // Refresh product list
         setProducts(products.filter(product => product._id !== id));
       } catch (error) {
-        setEr
+        setError('Error deleting product');
+      }
+    }
+  };
+  
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setPage(0);
+  };
+  
+  const handleCategoryChange = (e) => {
+    setCategoryFilter(e.target.value);
+    setPage(0);
+  };
+  
+  const handleStockFilterChange = (e) => {
+    setStockFilter(e.target.value);
+    setPage(0);
+  };
+  
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm('');
+    setCategoryFilter('');
+    setStockFilter('');
+    setPage(0);
+    
+    // Update URL to remove any query parameters
+    navigate('/products');
+  };
+  
+  if (loading && page === 0) {
+    return <Loader message="Loading products..." />;
+  }
+  
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1">
+          Products
+        </Typography>
+        {isManager && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            component={Link}
+            to="/products/new"
+          >
+            Add Product
+          </Button>
+        )}
+      </Box>
+      
+      {/* Filters */}
+      <Paper elevation={3} sx={{ p: 2, mb: 3 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+          <TextField
+            label="Search Products"
+            variant="outlined"
+            size="small"
+            value={searchTerm}
+            onChange={handleSearchChange}
+            sx={{ minWidth: 200, flexGrow: 1 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+          
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel id="category-filter-label">Category</InputLabel>
+            <Select
+              labelId="category-filter-label"
+              id="category-filter"
+              value={categoryFilter}
+              label="Category"
+              onChange={handleCategoryChange}
+            >
+              <MenuItem value="">All Categories</MenuItem>
+              {categories.map(category => (
+                <MenuItem key={category._id} value={category._id}>
+                  {category.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel id="stock-filter-label">Stock Level</InputLabel>
+            <Select
+              labelId="stock-filter-label"
+              id="stock-filter"
+              value={stockFilter}
+              label="Stock Level"
+              onChange={handleStockFilterChange}
+            >
+              <MenuItem value="">All Products</MenuItem>
+              <MenuItem value="low">Low Stock</MenuItem>
+            </Select>
+          </FormControl>
+          
+          <Button variant="outlined" size="small" onClick={clearFilters}>
+            Clear Filters
+          </Button>
+        </Box>
+      </Paper>
+      
+      {/* Products Table */}
+      <TableContainer component={Paper}>
+        <Table sx={{ minWidth: 650 }} aria-label="products table">
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell>SKU</TableCell>
+              <TableCell>Category</TableCell>
+              <TableCell align="right">Stock</TableCell>
+              <TableCell align="right">Price</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell align="center">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {products.length > 0 ? (
+              products.map((product) => (
+                <TableRow key={product._id} hover>
+                  <TableCell>
+                    <Link to={`/products/${product._id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      {product.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>{product.sku}</TableCell>
+                  <TableCell>{product.category ? product.category.name : 'Uncategorized'}</TableCell>
+                  <TableCell align="right">
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                      {product.quantity <= product.minStockLevel && (
+                        <WarningIcon color="warning" fontSize="small" sx={{ mr: 1 }} />
+                      )}
+                      {product.quantity} {product.unitOfMeasure}
+                    </Box>
+                  </TableCell>
+                  <TableCell align="right">
+                    {product.currency} {product.unitPrice.toFixed(2)}
+                  </TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={product.isActive ? "Active" : "Inactive"} 
+                      color={product.isActive ? "success" : "default"} 
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                      {isManager && (
+                        <IconButton 
+                          component={Link} 
+                          to={`/products/${product._id}/edit`}
+                          color="primary"
+                          size="small"
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                      {isManager && (
+                        <IconButton 
+                          color="error" 
+                          size="small"
+                          onClick={() => handleDelete(product._id)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={7} align="center">
+                  No products found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      
+      {/* Pagination */}
+      <TablePagination
+        rowsPerPageOptions={[5, 10, 25, 50]}
+        component="div"
+        count={totalProducts}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+      />
+    </Box>
+  );
+};
+
+export default ProductList;

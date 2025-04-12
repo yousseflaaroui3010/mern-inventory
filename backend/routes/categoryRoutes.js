@@ -24,4 +24,8 @@ router.put('/:id', protect, authorize('admin', 'manager'), updateCategory);
 // Delete category
 router.delete('/:id', protect, authorize('admin'), deleteCategory);
 
+
+router.get('/', (req, res) => {
+    res.json({ message: 'Category routes working' });
+  });
 module.exports = router;

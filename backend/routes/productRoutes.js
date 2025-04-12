@@ -66,6 +66,11 @@ router.put(
   updateProduct
 );
 
+// Temporary route for testing
+router.get('/', (req, res) => {
+  res.json({ message: 'Product routes working' });
+});
+
 // Delete product
 router.delete('/:id', protect, authorize('admin'), deleteProduct);
 
