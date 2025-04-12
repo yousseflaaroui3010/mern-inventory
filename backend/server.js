@@ -30,12 +30,14 @@ app.get('/', (req, res) => {
   res.send('Inventory Management API is running');
 });
 
-// Routes - comment these out until we create the files
-// app.use('/api/users', require('./routes/userRoutes'));
-// app.use('/api/products', require('./routes/productRoutes'));
-// app.use('/api/categories', require('./routes/categoryRoutes'));
-// app.use('/api/suppliers', require('./routes/supplierRoutes'));
-// app.use('/api/transactions', require('./routes/transactionRoutes'));
+// Simple product routes for testing
+app.get('/api/products', (req, res) => {
+  res.json({ message: 'Get all products' });
+});
+
+app.post('/api/products', (req, res) => {
+  res.json({ message: 'Create product', data: req.body });
+});
 
 // Start server
 const PORT = process.env.PORT || 5000;

@@ -16,6 +16,7 @@ import {
   Alert,
   Autocomplete
 } from '@mui/material';
+import { FormHelperText } from '@mui/material';
 import { Save as SaveIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import AuthContext from '../../context/AuthContext';
 import InventoryContext from '../../context/InventoryContext';
