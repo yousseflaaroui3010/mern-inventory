@@ -80,12 +80,12 @@ export const login = ({ email, password }) => dispatch => {
 
   axios
     .post('/api/users/login', body, config)
-    .then(res =>
+    .then(res => {
       dispatch({
         type: LOGIN_SUCCESS,
         payload: res.data
-      })
-    )
+      });
+    })
     .catch(err => {
       dispatch(
         returnErrors(err.response ? err.response.data : 'Server Error', 
@@ -97,7 +97,6 @@ export const login = ({ email, password }) => dispatch => {
       });
     });
 };
-
 // Logout User
 export const logout = () => {
   return {
@@ -113,7 +112,7 @@ export const tokenConfig = getState => {
   // Headers
   const config = {
     headers: {
-      'Content-type': 'application/json'
+      'Content-Type': 'application/json'
     }
   };
 

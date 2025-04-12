@@ -28,7 +28,7 @@ const AddProduct = () => {
     
     dispatch(addProduct(newProduct));
 
-    // Reset form
+    // Reset form after submission
     setNewProduct({
       name: '',
       qty: 0,
@@ -56,7 +56,7 @@ const AddProduct = () => {
         </div>
         <div className="form-row">
           <div className="form-group col-md-4">
-            <label htmlFor="amount">Quantity</label>
+            <label>Quantity</label>
             <input type="number" className="form-control" name="qty" placeholder="Quantity" value={qty} onChange={e => handleChange(e)} required />
           </div>
           <div className="form-group col-md-2">
@@ -75,7 +75,7 @@ const AddProduct = () => {
             <input type="number" className="form-control" name="weight" placeholder="Weight" value={weight} onChange={e => handleChange(e)} required />
           </div>
         </div>
-        <input type="submit" className="btn btn-primary" value="Add Product" />
+        <button type="submit" className="btn btn-primary">Add Product</button>
       </form>
     </div>
   )

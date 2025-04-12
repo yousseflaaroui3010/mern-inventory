@@ -1,3 +1,4 @@
+// client/backend/routes/user.js
 const router = require('express').Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -57,9 +58,12 @@ router.post('/register', async (req, res) => {
 });
 
 // Login user
+// Login user
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
-
+  
+  console.log('Login attempt:', email); // Add for debugging
+  
   // Simple validation
   if (!email || !password) {
     return res.status(400).json('Please enter all fields');
@@ -90,6 +94,7 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (err) {
+    console.error('Login error:', err);
     res.status(400).json(`Error: ${err}`);
   }
 });

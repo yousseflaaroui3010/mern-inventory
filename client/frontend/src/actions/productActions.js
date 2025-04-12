@@ -1,3 +1,4 @@
+// client/frontend/src/actions/productActions.js
 import axios from 'axios';
 import { returnErrors } from './errorActions';
 import { tokenConfig } from './authActions';
@@ -22,10 +23,10 @@ export const getProducts = () => (dispatch, getState) => {
         payload: res.data
       })
     )
-    .catch(err =>
-      dispatch(returnErrors(err.response ? err.response.data : 'Server Error', 
-                          err.response ? err.response.status : 500))
-    );
+    .catch(err => {
+      dispatch(returnErrors(err.response ? err.response.data : 'Server Error'));
+      console.error('Error getting products:', err);
+    });
 };
 
 export const addProduct = product => (dispatch, getState) => {
@@ -38,8 +39,7 @@ export const addProduct = product => (dispatch, getState) => {
       })
     )
     .catch(err => {
-      dispatch(returnErrors(err.response ? err.response.data : 'Server Error', 
-                          err.response ? err.response.status : 500));
+      dispatch(returnErrors(err.response ? err.response.data : 'Server Error'));
       console.error('Error adding product:', err);
     });
 };
@@ -53,10 +53,10 @@ export const updateProduct = product => (dispatch, getState) => {
         payload: res.data
       })
     )
-    .catch(err =>
-      dispatch(returnErrors(err.response ? err.response.data : 'Server Error', 
-                          err.response ? err.response.status : 500))
-    );
+    .catch(err => {
+      dispatch(returnErrors(err.response ? err.response.data : 'Server Error'));
+      console.error('Error updating product:', err);
+    });
 };
 
 export const deleteProduct = id => (dispatch, getState) => {
@@ -68,10 +68,10 @@ export const deleteProduct = id => (dispatch, getState) => {
         payload: id
       })
     )
-    .catch(err =>
-      dispatch(returnErrors(err.response ? err.response.data : 'Server Error', 
-                          err.response ? err.response.status : 500))
-    );
+    .catch(err => {
+      dispatch(returnErrors(err.response ? err.response.data : 'Server Error'));
+      console.error('Error deleting product:', err);
+    });
 };
 
 export const editProduct = product => {
