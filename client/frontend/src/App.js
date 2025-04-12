@@ -1,15 +1,20 @@
-import React from 'react'
-import { BrowserRouter as Router, Route } from 'react-router-dom'
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Route } from 'react-router-dom';
 
-import { Provider } from 'react-redux'
-import store from './store'
+import { Provider } from 'react-redux';
+import store from './store';
+import { loadUser } from './actions/authActions';
 
-import Home from './component/Home'
-import Login from './component/Login'
-import Register from './component/Register'
-import Dashboard from './component/dashboard/Dashboard'
+import Home from './component/Home';
+import Login from './component/Login';
+import Register from './component/Register';
+import Dashboard from './component/dashboard/Dashboard';
 
 const App = () => {
+  useEffect(() => {
+    store.dispatch(loadUser());
+  }, []);
+
   return (
     <Provider store={store}>
       <Router>
@@ -19,7 +24,7 @@ const App = () => {
         <Route path='/dashboard' component={Dashboard} />
       </Router>
     </Provider>
-  )
-}
+  );
+};
 
-export default App
+export default App;

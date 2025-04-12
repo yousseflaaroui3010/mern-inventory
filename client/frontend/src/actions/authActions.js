@@ -1,108 +1,126 @@
-import axios from 'axios'
-import { returnErrors } from "./errorActions";
+import axios from 'axios';
+import { returnErrors } from './errorActions';
 
 import {
-  USER_LOADING,
   USER_LOADED,
+  USER_LOADING,
   AUTH_ERROR,
   LOGIN_SUCCESS,
   LOGIN_FAIL,
   LOGOUT_SUCCESS,
   REGISTER_SUCCESS,
   REGISTER_FAIL
-} from './types'
+} from './types';
 
-export const loadUser = () => dispatch => {
-  dispatch({ type: USER_LOADING })
+// Check token & load user
+export const loadUser = () => (dispatch, getState) => {
+  // User loading
+  dispatch({ type: USER_LOADING });
 
-  axios.get('/api/users/user')
-    .then(res => {
-      console.log("User loaded:", res.data);
+  axios
+    .get('/api/users/user', tokenConfig(getState))
+    .then(res =>
       dispatch({
         type: USER_LOADED,
         payload: res.data
       })
-    })
+    )
     .catch(err => {
-      console.error("Error loading user:", err.response ? err.response.data : err.message);
-      dispatch(returnErrors(err.response ? err.response.data : err.message));
+      dispatch(returnErrors(err.response ? err.response.data : 'Server Error', 
+                           err.response ? err.response.status : 500));
       dispatch({
         type: AUTH_ERROR
-      })
-    })
-}
+      });
+    });
+};
 
-export const login = ({ email, password }) => dispatch => {
-  console.log("Login attempt with:", email);
-  
-  // Request body
-  const body = JSON.stringify({ email, password });
-  
+// Register User
+export const register = ({ username, email, password }) => dispatch => {
   // Headers
   const config = {
     headers: {
       'Content-Type': 'application/json'
     }
   };
-  
-  axios.post('/api/users/login', { email, password }, config)
-    .then(res => {
-      console.log("Login successful:", res.data);
-      dispatch({
-        type: LOGIN_SUCCESS,
-        payload: res.data
-      })
-    })
-    .catch(err => {
-      console.error("Login failed:", err.response ? err.response.data : err.message);
-      dispatch(returnErrors(err.response ? err.response.data : err.message));
-      dispatch({
-        type: LOGIN_FAIL
-      })
-    })
-}
 
-export const logout = () => dispatch => {
-  console.log("Logging out...");
-  
-  axios.post('/api/users/logout')
-    .then(() => {
-      console.log("Logout successful");
-      dispatch({
-        type: LOGOUT_SUCCESS
-      })
-    })
-    .catch(err => {
-      console.error("Logout error:", err.response ? err.response.data : err.message);
-    })
-}
-
-export const register = ({ username, email, password }) => dispatch => {
-  console.log("Registration attempt for:", email);
-  
   // Request body
   const body = JSON.stringify({ username, email, password });
-  
-  // Headers
-  const config = {
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  };
-  
-  axios.post('/api/users/register', { username, email, password }, config)
-    .then(res => {
-      console.log("Registration successful:", res.data);
+
+  axios
+    .post('/api/users/register', body, config)
+    .then(res =>
       dispatch({
         type: REGISTER_SUCCESS,
         payload: res.data
       })
-    })
+    )
     .catch(err => {
-      console.error("Registration failed:", err.response ? err.response.data : err.message);
-      dispatch(returnErrors(err.response ? err.response.data : err.message));
+      dispatch(
+        returnErrors(err.response ? err.response.data : 'Server Error', 
+                    err.response ? err.response.status : 500, 
+                    'REGISTER_FAIL')
+      );
       dispatch({
         type: REGISTER_FAIL
+      });
+    });
+};
+
+// Login User
+export const login = ({ email, password }) => dispatch => {
+  // Headers
+  const config = {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+
+  // Request body
+  const body = JSON.stringify({ email, password });
+
+  axios
+    .post('/api/users/login', body, config)
+    .then(res =>
+      dispatch({
+        type: LOGIN_SUCCESS,
+        payload: res.data
       })
-    })
-}
+    )
+    .catch(err => {
+      dispatch(
+        returnErrors(err.response ? err.response.data : 'Server Error', 
+                    err.response ? err.response.status : 500, 
+                    'LOGIN_FAIL')
+      );
+      dispatch({
+        type: LOGIN_FAIL
+      });
+    });
+};
+
+// Logout User
+export const logout = () => {
+  return {
+    type: LOGOUT_SUCCESS
+  };
+};
+
+// Setup config/headers and token
+export const tokenConfig = getState => {
+  // Get token from localStorage
+  const token = getState().auth.token;
+
+  // Headers
+  const config = {
+    headers: {
+      'Content-type': 'application/json'
+    }
+  };
+
+  // If token, add to headers
+  if (token) {
+    config.headers['x-auth-token'] = token;
+  }
+
+  return config;
+};

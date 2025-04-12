@@ -1,88 +1,94 @@
 const router = require('express').Router();
+const auth = require('../middleware/auth');
 let Product = require('../models/product.model');
 
-// Get/read products
-router.route('/').get(chechAuthentication, (req, res) => {
-  Product.find({ userId: req.user._id })
-    .then(products => res.json(products))
-    .catch(error => res.status(400).json(`Error: ${error}`));
+// Get all products
+router.get('/', auth, async (req, res) => {
+  try {
+    const products = await Product.find({ userId: req.user.id });
+    res.json(products);
+  } catch (err) {
+    res.status(400).json(`Error: ${err}`);
+  }
 });
 
-// Add product
-router.route('/add').post(chechAuthentication, (req, res) => {
-  const name = req.body.name;
-  const qty = Number(req.body.qty);
-  const um = req.body.um;
-  const price = Number(req.body.price);
-  const weight = Number(req.body.weight);
-  const description = req.body.description;
-  const userId = req.user._id;
-
+// Add new product
+router.post('/add', auth, async (req, res) => {
+  const { name, qty, um, price, weight, description } = req.body;
+  
   const newProduct = new Product({
     name,
-    qty,
+    qty: Number(qty),
     um,
-    price,
-    weight,
+    price: Number(price),
+    weight: Number(weight),
     description,
-    userId
+    userId: req.user.id
   });
 
-  newProduct.save()
-    .then(product => {
-      res.json(product)
-      console.log(product)
-    })
-    .catch(error => res.status(400).json(`Error: ${error}`));
-});
-
-// Get a product by its ID
-router.route('/:id').get(chechAuthentication, (req, res) => {
-  Product.findById(req.params.id)
-    .then(product => {
-      if (product.userId !== req.user._id) {
-        return res.status(401).json('User NOT Authorized!')
-      } else {
-        res.json(product)
-      }
-    })
-    .catch(error => res.status(400).json(`Error: ${error}`));
-});
-
-// Update
-router.route('/update/:id').post(chechAuthentication, (req, res) => {
-  Product.findById(req.params.id)
-    .then(product => {
-      product.name = req.body.name;
-      product.qty = Number(req.body.qty);
-      product.um = req.body.um;
-      product.price = Number(req.body.price);
-      product.weight = Number(req.body.weight);
-      product.description = req.body.description;
-      product.date = new Date().getDate();
-      product.userId = req.user._id
-
-      product.save()
-        .then(savedProduct => res.json(savedProduct))
-        .catch(error => res.status(400).json(`Error: ${error}`))
-    })
-    .catch(error => res.status(400).json(`Error: ${error}`))
-
-});
-
-// Delete
-router.route('/:id').delete(chechAuthentication, (req, res) => {
-  Product.findOneAndDelete({ _id: req.params.id, userId: req.user._id })
-    .then(product => res.json(product._id))
-    .catch(error => res.status(400).json(`Error: ${error}`));
-});
-
-function chechAuthentication(req, res, next) {
-  if (req.isAuthenticated()) {
-    return next();
+  try {
+    const savedProduct = await newProduct.save();
+    res.json(savedProduct);
+  } catch (err) {
+    res.status(400).json(`Error: ${err}`);
   }
+});
 
-  res.status(401).json('User NOT Authorized!');
-}
+// Get product by id
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    
+    // Make sure user owns product
+    if (product.userId.toString() !== req.user.id) {
+      return res.status(401).json('Not authorized');
+    }
+    
+    res.json(product);
+  } catch (err) {
+    res.status(400).json(`Error: ${err}`);
+  }
+});
+
+// Update product
+router.post('/update/:id', auth, async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    
+    // Make sure user owns product
+    if (product.userId.toString() !== req.user.id) {
+      return res.status(401).json('Not authorized');
+    }
+    
+    product.name = req.body.name;
+    product.qty = Number(req.body.qty);
+    product.um = req.body.um;
+    product.price = Number(req.body.price);
+    product.weight = Number(req.body.weight);
+    product.description = req.body.description;
+    
+    const updatedProduct = await product.save();
+    res.json(updatedProduct);
+  } catch (err) {
+    res.status(400).json(`Error: ${err}`);
+  }
+});
+
+// Delete product
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    
+    // Make sure user owns product
+    if (product.userId.toString() !== req.user.id) {
+      return res.status(401).json('Not authorized');
+    }
+    
+    await product.remove();
+    res.json({ id: req.params.id });
+  } catch (err) {
+    res.status(400).json(`Error: ${err}`);
+  }
+});
 
 module.exports = router;

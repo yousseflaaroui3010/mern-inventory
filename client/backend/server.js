@@ -1,66 +1,42 @@
-if (process.env.NODE_ENV !== 'production') {
-  require('dotenv').config();
-}
-
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const passport = require('passport');
-const flash = require('express-flash');
-const session = require('express-session');
 const path = require('path');
-const keys = require('./config/keys');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(flash());
-app.use(session({
-  secret: keys.sessionSecret,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    maxAge: 1000 * 60 * 60 * 2,
-  }
-}));
-app.use(passport.initialize());
-app.use(passport.session());
 
-const uri = keys.mongoURI;
-mongoose.connect(uri, { useNewUrlParser: true, useCreateIndex: true, useUnifiedTopology: true });
+// DB Config
+const keys = require('./config/keys');
 
-const connection = mongoose.connection;
-connection.once('open', () => {
-  console.log('MongoDB database connection established successfully');
-})
+// Connect to MongoDB
+mongoose
+  .connect(keys.mongoURI, { 
+    useNewUrlParser: true, 
+    useCreateIndex: true, 
+    useUnifiedTopology: true 
+  })
+  .then(() => console.log('MongoDB Connected...'))
+  .catch(err => console.log('MongoDB Connection Error:', err));
 
-// Add API endpoint routes
-const productRouter = require('./routes/product');
-const userRouter = require('./routes/user');
+// Use Routes
+app.use('/api/users', require('./routes/user'));
+app.use('/api/products', require('./routes/product'));
 
-app.use('/api/products', chechAuthentication, productRouter);
-app.use('/api/users', userRouter);
-
-function chechAuthentication(req, res, next) {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-
-  res.status(401).json('User NOT authorized');
-}
-
-// Deployment
+// Serve static assets if in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static('client/build'));
+  // Set static folder
+  app.use(express.static('../frontend/build'));
 
   app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, 'client', 'build', 'index.html'))
-  })
+    res.sendFile(path.resolve(__dirname, '../frontend', 'build', 'index.html'));
+  });
 }
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port: ${PORT}`);
-})
+app.listen(PORT, () => console.log(`Server started on port ${PORT}`));

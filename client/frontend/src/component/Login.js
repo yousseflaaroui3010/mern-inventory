@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Redirect, Link } from 'react-router-dom'
 
 import { useSelector, useDispatch } from 'react-redux'
@@ -26,16 +26,32 @@ const Login = () => {
         <form onSubmit={e => handleSubmit(e)}>
           <div className="form-group">
             <label htmlFor="email">Email address</label>
-            <input type="email" name="email" className="form-control" aria-describedby="emailHelp" value={email} onChange={e => setEmail(e.target.value)} />
+            <input 
+              type="email" 
+              name="email" 
+              className="form-control" 
+              aria-describedby="emailHelp" 
+              value={email} 
+              onChange={e => setEmail(e.target.value)}
+              required 
+            />
             <small id="emailHelp" className="form-text text-muted">We'll never share your email with anyone else.</small>
           </div>
           <div className="form-group">
             <label htmlFor="password">Password</label>
-            <input type="password" className="form-control" name="password" value={password} onChange={e => setPassword(e.target.value)} />
+            <input 
+              type="password" 
+              className="form-control" 
+              name="password" 
+              value={password} 
+              onChange={e => setPassword(e.target.value)} 
+              required
+            />
           </div>
-          <button type="submit" className="btn btn-primary btn-block">Submit</button>
+          <button type="submit" className="btn btn-primary btn-block">Login</button>
         </form>
-        <Link className="btn btn-warning btn-sm mt-4" to="/">&larr; Home</Link>
+        <p className="mt-3">Don't have an account? <Link to="/register">Register here</Link></p>
+        <Link className="btn btn-outline-secondary btn-sm mt-4" to="/">&larr; Back to Home</Link>
       </div>
   )
 }
