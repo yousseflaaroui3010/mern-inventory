@@ -8,7 +8,7 @@ import {
   CANCEL_EDIT,
   UPDATED_PRODUCT,
   DELETE_PRODUCTS
-} from '../actions/types'
+} from './types'
 import { returnErrors } from './errorActions'
 
 export const getProducts = () => dispatch => {
@@ -23,13 +23,23 @@ export const getProducts = () => dispatch => {
 }
 
 export const addProduct = newProduct => dispatch => {
-
-  axios.post('/api/products/add', newProduct)
+  const token = localStorage.getItem('token');
+  const config = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  };
+  
+  axios.post('/api/products/add', newProduct, config)
     .then(res => dispatch({
       type: ADD_PRODUCT,
       payload: res.data
     }))
-    .catch(err => dispatch(returnErrors(err.message)))
+    .catch(err => {
+      console.error("Error adding product:", err);
+      dispatch(returnErrors(err.response ? err.response.data : err.message));
+    });
 }
 
 export const editProduct = product => dispatch => {
