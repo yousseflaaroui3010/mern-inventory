@@ -1,26 +1,14 @@
-// routes/productRoutes.js
+// routes/userRoutes.js
 const express = require('express');
 const router = express.Router();
+const { registerUser, loginUser, getUserProfile } = require('../controllers/authController');
+const { protect } = require('../middleware/authMiddleware');
 
-// Temporary routes for testing
-router.get('/', (req, res) => {
-  res.json({ message: 'Get all products' });
-});
+// Public routes
+router.post('/register', registerUser);
+router.post('/login', loginUser);
 
-router.post('/', (req, res) => {
-  res.json({ message: 'Create product', data: req.body });
-});
-
-router.get('/:id', (req, res) => {
-  res.json({ message: `Get product with id ${req.params.id}` });
-});
-
-router.put('/:id', (req, res) => {
-  res.json({ message: `Update product with id ${req.params.id}`, data: req.body });
-});
-
-router.delete('/:id', (req, res) => {
-  res.json({ message: `Delete product with id ${req.params.id}` });
-});
+// Protected routes
+router.get('/profile', protect, getUserProfile);
 
 module.exports = router;

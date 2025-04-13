@@ -1,26 +1,32 @@
 // routes/productRoutes.js
 const express = require('express');
 const router = express.Router();
+const { protect, authorize } = require('../middleware/authMiddleware');
+const {
+  getProducts,
+  getProduct,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getLowStockProducts
+} = require('../controllers/productController');
 
-// Temporary routes for testing
-router.get('/', (req, res) => {
-  res.json({ message: 'Get all products' });
-});
+// Get all products
+router.get('/', protect, getProducts);
 
-router.post('/', (req, res) => {
-  res.json({ message: 'Create product', data: req.body });
-});
+// Get low stock products
+router.get('/low-stock', protect, getLowStockProducts);
 
-router.get('/:id', (req, res) => {
-  res.json({ message: `Get product with id ${req.params.id}` });
-});
+// Get single product
+router.get('/:id', protect, getProduct);
 
-router.put('/:id', (req, res) => {
-  res.json({ message: `Update product with id ${req.params.id}`, data: req.body });
-});
+// Create new product
+router.post('/', protect, authorize('admin', 'manager'), createProduct);
 
-router.delete('/:id', (req, res) => {
-  res.json({ message: `Delete product with id ${req.params.id}` });
-});
+// Update product
+router.put('/:id', protect, authorize('admin', 'manager'), updateProduct);
+
+// Delete product
+router.delete('/:id', protect, authorize('admin'), deleteProduct);
 
 module.exports = router;

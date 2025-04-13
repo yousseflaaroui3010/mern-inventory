@@ -1,23 +1,22 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
 
-// Generate JWT
+// Generate JWT token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d'
+    expiresIn: '30d',
   });
 };
 
-// @desc    Register a new user
+// @desc    Register a user
 // @route   POST /api/users/register
-// @access  Public (Admin only in a real application)
+// @access  Public
 exports.registerUser = async (req, res) => {
   try {
-    const { username, email, password, role } = req.body;
+    const { username, email, password } = req.body;
 
     // Check if user exists
     const userExists = await User.findOne({ email });
-
     if (userExists) {
       return res.status(400).json({ message: 'User already exists' });
     }
@@ -27,7 +26,6 @@ exports.registerUser = async (req, res) => {
       username,
       email,
       password,
-      role: role || 'staff' // Default to staff if role not specified
     });
 
     if (user) {
@@ -36,7 +34,7 @@ exports.registerUser = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
-        token: generateToken(user._id)
+        token: generateToken(user._id),
       });
     } else {
       res.status(400).json({ message: 'Invalid user data' });
@@ -57,7 +55,14 @@ exports.loginUser = async (req, res) => {
     // Check for user email
     const user = await User.findOne({ email }).select('+password');
 
-    if (!user || !(await user.matchPassword(password))) {
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Check if password matches
+    const isMatch = await user.matchPassword(password);
+
+    if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
@@ -66,7 +71,7 @@ exports.loginUser = async (req, res) => {
       username: user.username,
       email: user.email,
       role: user.role,
-      token: generateToken(user._id)
+      token: generateToken(user._id),
     });
   } catch (error) {
     console.error(error);
@@ -86,7 +91,7 @@ exports.getUserProfile = async (req, res) => {
         _id: user._id,
         username: user.username,
         email: user.email,
-        role: user.role
+        role: user.role,
       });
     } else {
       res.status(404).json({ message: 'User not found' });

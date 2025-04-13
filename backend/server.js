@@ -25,18 +25,16 @@ mongoose
   .then(() => console.log("MongoDB connected successfully"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
+// Routes
+app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/products', require('./routes/productRoutes'));
+app.use('/api/categories', require('./routes/categoryRoutes'));
+app.use('/api/suppliers', require('./routes/supplierRoutes'));
+app.use('/api/transactions', require('./routes/transactionRoutes'));
+
 // Basic route for testing
 app.get('/', (req, res) => {
   res.send('Inventory Management API is running');
-});
-
-// Simple product routes for testing
-app.get('/api/products', (req, res) => {
-  res.json({ message: 'Get all products' });
-});
-
-app.post('/api/products', (req, res) => {
-  res.json({ message: 'Create product', data: req.body });
 });
 
 // Start server
