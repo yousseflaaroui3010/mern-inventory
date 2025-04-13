@@ -93,6 +93,11 @@ const Login = () => {
               disabled={loading}
             >
               {loading ? 'Logging in...' : 'Log In'}
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                <Link to="/register" style={{ textDecoration: 'none' }}>
+                  Don't have an account? Register here
+                </Link>
+              </Box>
             </Button>
           </Box>
         </Paper>

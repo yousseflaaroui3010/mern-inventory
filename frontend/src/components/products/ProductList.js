@@ -162,18 +162,17 @@ const ProductList = () => {
         <Typography variant="h4" component="h1">
           Products
         </Typography>
-        {isManager && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            component={Link}
-            to="/products/new"
-          >
-            Add Product
-          </Button>
-        )}
-      </Box>
-      
+{isManager && (
+  <Button
+  variant="contained"
+  startIcon={<AddIcon />}
+  component={Link}
+  to="/products/new"
+>
+  Add Product
+</Button>
+)}
+    </Box>
       {/* Filters */}
       <Paper elevation={3} sx={{ p: 2, mb: 3 }}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Grid,
@@ -21,6 +21,7 @@ import LowStockAlert from './LowStockAlert';
 import axios from '../../utils/axiosConfig';
 
 const Dashboard = () => {
+  const [isLoading, setIsLoading] = useState(true);
   const { 
     loading, 
     error, 
@@ -43,6 +44,7 @@ const Dashboard = () => {
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
+        setIsLoading(true);
         // Fetch products
         const productsResponse = await fetchProducts();
         
@@ -66,25 +68,28 @@ const Dashboard = () => {
         });
         
         // Update state
-        setLowStockProducts(lowStockResponse);
-        setRecentTransactions(transactionsResponse.data.slice(0, 5)); // Last 5 transactions
-        setTransactionsSummary(summaryResponse);
+        setLowStockProducts(lowStockResponse || []);
+        setRecentTransactions(transactionsResponse?.data?.slice(0, 5) || []); // Last 5 transactions
+        setTransactionsSummary(summaryResponse || {});
         
         setStats({
-          totalProducts: productsResponse.count,
-          totalCategories: categoriesResponse.data.length,
-          totalTransactions: transactionsResponse.data.length,
-          lowStockCount: lowStockResponse.length
+          totalProducts: productsResponse?.count || 0,
+          totalCategories: categoriesResponse?.data?.length || 0,
+          totalTransactions: transactionsResponse?.data?.length || 0,
+          lowStockCount: lowStockResponse?.length || 0
         });
+        
+        setIsLoading(false);
       } catch (err) {
         console.error('Error loading dashboard data:', err);
+        setIsLoading(false);
       }
     };
     
     loadDashboardData();
   }, [fetchProducts, fetchLowStockProducts, getTransactionsSummary]);
   
-  if (loading) {
+  if (isLoading) {
     return <Loader message="Loading dashboard..." />;
   }
   
