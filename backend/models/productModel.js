@@ -63,6 +63,10 @@ const productSchema = new mongoose.Schema({
   barcode: {
     type: String
   },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
   lastRestockDate: {
     type: Date
   },
@@ -74,8 +78,6 @@ const productSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
-}, {
-  timestamps: true
 });
 
 // Update the "updatedAt" field before saving

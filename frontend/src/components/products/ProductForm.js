@@ -97,12 +97,11 @@ const ProductForm = ({ initialValues = {}, onSubmit, isEdit = false }) => {
       };
 
       if (isEdit) {
-        await axios.put(`/products/${initialValues._id}`, productData);
+        await onSubmit(productData);
       } else {
         await axios.post('/products', productData);
+        navigate('/products');
       }
-      
-      navigate('/products');
     } catch (error) {
       setSubmitError(error.response?.data?.message || 'Error saving product. Please try again.');
     } finally {

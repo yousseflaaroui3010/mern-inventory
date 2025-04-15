@@ -8,8 +8,8 @@ exports.getProducts = async (req, res) => {
   try {
     console.log('Fetching products with query:', req.query);
     
-    // Base query
-    let query = {};
+    // Base query - only show active products
+    let query = { isActive: true };
     
     // Add search filter if provided
     if (req.query.search) {
@@ -224,15 +224,12 @@ exports.deleteProduct = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
     
-    // Delete the product permanently
+    // Completely delete the product
     await Product.findByIdAndDelete(req.params.id);
     
-    // Also delete any associated transactions
-    await Transaction.deleteMany({ product: req.params.id });
-    
-    res.json({ message: 'Product deleted successfully' });
+    res.json({ message: 'Product removed successfully' });
   } catch (error) {
-    console.error('Error in deleteProduct:', error);
+    console.error(error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

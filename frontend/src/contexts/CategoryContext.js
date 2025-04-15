@@ -5,36 +5,33 @@ const CategoryContext = createContext();
 
 export const CategoryProvider = ({ children }) => {
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchCategories = async (retryCount = 3) => {
+  const fetchCategories = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
       const response = await axios.get('/categories');
-      setCategories(response.data || []);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      if (retryCount > 0 && (!error.response || error.response.status >= 500)) {
-        // Wait for 1 second before retrying
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return fetchCategories(retryCount - 1);
-      }
-      setError(error.message || 'Error fetching categories');
-      setCategories([]);
+      setCategories(response.data);
+      setError(null);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error fetching categories');
     } finally {
       setLoading(false);
     }
   };
 
   const addCategory = async (categoryData) => {
+    setLoading(true);
     try {
       const response = await axios.post('/categories', categoryData);
-      setCategories([...categories, response.data]);
+      setCategories(prev => [...prev, response.data]);
       return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.message || 'Error adding category');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error adding category');
+      throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
