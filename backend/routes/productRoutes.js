@@ -21,12 +21,12 @@ router.get('/low-stock', protect, getLowStockProducts);
 router.get('/:id', protect, getProduct);
 
 // Create new product
-router.post('/', protect, authorize('admin', 'manager'), createProduct);
+router.post('/', protect, createProduct);
 
 // Update product
-router.put('/:id', protect, authorize('admin', 'manager'), updateProduct);
+router.put('/:id', protect, updateProduct);
 
 // Delete product
-router.delete('/:id', protect, authorize('admin'), deleteProduct);
+router.delete('/:id', protect, deleteProduct);
 
 module.exports = router;

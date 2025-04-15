@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Grid,
@@ -6,7 +6,7 @@ import {
   Typography,
   Button,
   Box,
-  Divider
+  CircularProgress
 } from '@mui/material';
 import {
   Inventory as InventoryIcon,
@@ -14,255 +14,142 @@ import {
   SwapHoriz as TransactionIcon,
   Category as CategoryIcon
 } from '@mui/icons-material';
-import InventoryContext from '../../context/InventoryContext';
-import Loader from '../layout/Loader';
-import Summary from './Summary';
-import LowStockAlert from './LowStockAlert';
 import axios from '../../utils/axiosConfig';
 
 const Dashboard = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const { 
-    loading, 
-    error, 
-    fetchProducts, 
-    fetchLowStockProducts, 
-    getTransactionsSummary 
-  } = useContext(InventoryContext);
-  
-  const [stats, setStats] = useState({
-    totalProducts: 0,
-    totalCategories: 0,
-    totalTransactions: 0,
-    lowStockCount: 0
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({
+    products: 0,
+    categories: 0,
+    transactions: 0,
+    lowStock: 0
   });
-  
-  const [lowStockProducts, setLowStockProducts] = useState([]);
-  const [recentTransactions, setRecentTransactions] = useState([]);
-  const [transactionsSummary, setTransactionsSummary] = useState({});
-  
+
   useEffect(() => {
-    const loadDashboardData = async () => {
+    const fetchData = async () => {
       try {
-        setIsLoading(true);
-        // Fetch products
-        const productsResponse = await fetchProducts();
-        
-        // Fetch categories
-        const categoriesResponse = await axios.get('/categories');
-        
-        // Fetch low stock products
-        const lowStockResponse = await fetchLowStockProducts();
-        
-        // Fetch transactions
-        const transactionsResponse = await axios.get('/transactions');
-        
-        // Fetch transactions summary (last 30 days)
-        const today = new Date();
-        const thirtyDaysAgo = new Date(today);
-        thirtyDaysAgo.setDate(today.getDate() - 30);
-        
-        const summaryResponse = await getTransactionsSummary({
-          startDate: thirtyDaysAgo.toISOString(),
-          endDate: today.toISOString()
+        const [products, categories, transactions] = await Promise.all([
+          axios.get('/products'),
+          axios.get('/categories'),
+          axios.get('/transactions')
+        ]);
+
+        setData({
+          products: products.data.count || 0,
+          categories: categories.data.length || 0,
+          transactions: transactions.data.length || 0,
+          lowStock: products.data.data.filter(p => p.quantity <= p.minStockLevel).length || 0
         });
-        
-        // Update state
-        setLowStockProducts(lowStockResponse || []);
-        setRecentTransactions(transactionsResponse?.data?.slice(0, 5) || []); // Last 5 transactions
-        setTransactionsSummary(summaryResponse || {});
-        
-        setStats({
-          totalProducts: productsResponse?.count || 0,
-          totalCategories: categoriesResponse?.data?.length || 0,
-          totalTransactions: transactionsResponse?.data?.length || 0,
-          lowStockCount: lowStockResponse?.length || 0
-        });
-        
-        setIsLoading(false);
-      } catch (err) {
-        console.error('Error loading dashboard data:', err);
-        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
       }
     };
-    
-    loadDashboardData();
-  }, [fetchProducts, fetchLowStockProducts, getTransactionsSummary]);
-  
-  if (isLoading) {
-    return <Loader message="Loading dashboard..." />;
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <CircularProgress />
+      </Box>
+    );
   }
-  
+
+  const cards = [
+    {
+      title: 'Total Products',
+      value: data.products,
+      icon: <InventoryIcon sx={{ color: '#1976d2', fontSize: 40 }} />,
+      link: '/products',
+      color: '#e3f2fd'
+    },
+    {
+      title: 'Low Stock Items',
+      value: data.lowStock,
+      icon: <WarningIcon sx={{ color: '#ed6c02', fontSize: 40 }} />,
+      link: '/products?filter=lowStock',
+      color: '#fff3e0'
+    },
+    {
+      title: 'Transactions',
+      value: data.transactions,
+      icon: <TransactionIcon sx={{ color: '#2e7d32', fontSize: 40 }} />,
+      link: '/transactions',
+      color: '#e8f5e9'
+    },
+    {
+      title: 'Categories',
+      value: data.categories,
+      icon: <CategoryIcon sx={{ color: '#7b1fa2', fontSize: 40 }} />,
+      link: '/categories',
+      color: '#f3e5f5'
+    }
+  ];
+
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: '#1976d2' }}>
           Dashboard
         </Typography>
         <Button
           variant="contained"
           component={Link}
-          to="/transactions/new"
+          to="/products/new"
+          sx={{ 
+            bgcolor: '#1976d2',
+            '&:hover': { bgcolor: '#1565c0' }
+          }}
         >
-          New Transaction
+          Add New Product
         </Button>
       </Box>
-      
-      {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={3}
-            sx={{
-              p: 2,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 140,
-              bgcolor: '#e3f2fd'
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography color="textSecondary" gutterBottom>
-                Total Products
-              </Typography>
-              <InventoryIcon color="primary" />
-            </Box>
-            <Typography variant="h4" component="div">
-              {stats.totalProducts}
-            </Typography>
-            <Box sx={{ mt: 'auto' }}>
-              <Button
-                size="small"
-                component={Link}
-                to="/products"
-              >
-                View all
-              </Button>
-            </Box>
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={3}
-            sx={{
-              p: 2,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 140,
-              bgcolor: '#fff8e1'
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography color="textSecondary" gutterBottom>
-                Low Stock Items
-              </Typography>
-              <WarningIcon sx={{ color: '#ff9800' }} />
-            </Box>
-            <Typography variant="h4" component="div">
-              {stats.lowStockCount}
-            </Typography>
-            <Box sx={{ mt: 'auto' }}>
-              <Button
-                size="small"
-                component={Link}
-                to="/products?filter=lowStock"
-                color="warning"
-              >
-                View all
-              </Button>
-            </Box>
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={3}
-            sx={{
-              p: 2,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 140,
-              bgcolor: '#e8f5e9'
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography color="textSecondary" gutterBottom>
-                Transactions
-              </Typography>
-              <TransactionIcon sx={{ color: '#4caf50' }} />
-            </Box>
-            <Typography variant="h4" component="div">
-              {stats.totalTransactions}
-            </Typography>
-            <Box sx={{ mt: 'auto' }}>
-              <Button
-                size="small"
-                component={Link}
-                to="/transactions"
-                color="success"
-              >
-                View all
-              </Button>
-            </Box>
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={3}
-            sx={{
-              p: 2,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 140,
-              bgcolor: '#ede7f6'
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography color="textSecondary" gutterBottom>
-                Categories
-              </Typography>
-              <CategoryIcon sx={{ color: '#673ab7' }} />
-            </Box>
-            <Typography variant="h4" component="div">
-              {stats.totalCategories}
-            </Typography>
-            <Box sx={{ mt: 'auto' }}>
-              <Button
-                size="small"
-                component={Link}
-                to="/categories"
-                color="secondary"
-              >
-                View all
-              </Button>
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
-      
-      {/* Charts and Tables */}
+
       <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Paper elevation={3} sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Transaction Summary (Last 30 Days)
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <Summary data={transactionsSummary} />
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <Paper elevation={3} sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Low Stock Alerts
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <LowStockAlert products={lowStockProducts} />
-          </Paper>
-        </Grid>
+        {cards.map((card, index) => (
+          <Grid item xs={12} sm={6} md={3} key={index}>
+            <Paper
+              elevation={3}
+              sx={{
+                p: 3,
+                bgcolor: card.color,
+                height: '100%',
+                transition: 'transform 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: 4
+                }
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" color="text.secondary">
+                  {card.title}
+                </Typography>
+                {card.icon}
+              </Box>
+              
+              <Typography variant="h3" sx={{ mb: 2, fontWeight: 'bold' }}>
+                {card.value}
+              </Typography>
+
+              <Button
+                component={Link}
+                to={card.link}
+                variant="text"
+                size="small"
+                sx={{ 
+                  textTransform: 'none',
+                  '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.05)' }
+                }}
+              >
+                View Details →
+              </Button>
+            </Paper>
+          </Grid>
+        ))}
       </Grid>
     </Box>
   );

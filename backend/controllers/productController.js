@@ -6,31 +6,55 @@ const Transaction = require('../models/transactionModel');
 // @access  Private
 exports.getProducts = async (req, res) => {
   try {
-    const query = { ...req.query };
+    console.log('Fetching products with query:', req.query);
     
-    // Create query string
-    let queryStr = JSON.stringify(query);
-    queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
+    // Base query
+    let query = {};
+    
+    // Add search filter if provided
+    if (req.query.search) {
+      query.name = { $regex: req.query.search, $options: 'i' };
+    }
+    
+    // Add category filter if provided
+    if (req.query.category) {
+      query.category = req.query.category;
+    }
+    
+    // Add stock level filters
+    if (req.query.stockFilter) {
+      switch (req.query.stockFilter) {
+        case 'low':
+          query.quantity = { $lte: '$minStockLevel' };
+          break;
+        case 'out':
+          query.quantity = 0;
+          break;
+        case 'in':
+          query.quantity = { $gt: 0 };
+          break;
+      }
+    }
+    
+    console.log('Final query:', query);
     
     // Finding products
-    let products = Product.find(JSON.parse(queryStr)).populate('category', 'name').populate('supplier', 'name');
+    let products = await Product.find(query)
+      .populate('category', 'name')
+      .populate('supplier', 'name')
+      .sort('-createdAt');
     
-    // Sort
-    if (req.query.sort) {
-      const sortBy = req.query.sort.split(',').join(' ');
-      products = products.sort(sortBy);
-    } else {
-      products = products.sort('-createdAt');
-    }
+    console.log(`Found ${products.length} products`);
     
     // Pagination
     const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 25;
+    const limit = parseInt(req.query.limit, 10) || 10;
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
-    const total = await Product.countDocuments(JSON.parse(queryStr));
+    const total = products.length;
     
-    products = await products.skip(startIndex).limit(limit);
+    // Slice the array for pagination
+    products = products.slice(startIndex, endIndex);
     
     // Pagination result
     const pagination = {};
@@ -51,12 +75,12 @@ exports.getProducts = async (req, res) => {
     
     res.json({
       success: true,
-      count: products.length,
+      count: total,
       pagination,
       data: products
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error in getProducts:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -86,6 +110,8 @@ exports.getProduct = async (req, res) => {
 // @access  Private (Admin/Manager)
 exports.createProduct = async (req, res) => {
   try {
+    console.log('Received product creation request:', req.body);
+    
     const {
       name,
       description,
@@ -105,6 +131,7 @@ exports.createProduct = async (req, res) => {
     // Check if product with same SKU exists
     const existingProduct = await Product.findOne({ sku });
     if (existingProduct) {
+      console.log('Product with SKU already exists:', sku);
       return res.status(400).json({ message: 'Product with this SKU already exists' });
     }
     
@@ -126,6 +153,8 @@ exports.createProduct = async (req, res) => {
       lastRestockDate: quantity > 0 ? Date.now() : undefined
     });
     
+    console.log('Product created successfully:', product);
+    
     // Create initial stock transaction if quantity > 0
     if (quantity > 0) {
       await Transaction.create({
@@ -137,11 +166,12 @@ exports.createProduct = async (req, res) => {
         notes: 'Initial stock',
         performedBy: req.user._id
       });
+      console.log('Initial stock transaction created');
     }
     
     res.status(201).json(product);
   } catch (error) {
-    console.error(error);
+    console.error('Error creating product:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -194,20 +224,15 @@ exports.deleteProduct = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
     
-    // Check if product has transactions
-    const transactions = await Transaction.find({ product: req.params.id });
-    if (transactions.length > 0) {
-      // Instead of deleting, mark as inactive
-      product.isActive = false;
-      await product.save();
-      return res.json({ message: 'Product marked as inactive due to existing transactions' });
-    }
+    // Delete the product permanently
+    await Product.findByIdAndDelete(req.params.id);
     
-    await product.remove();
+    // Also delete any associated transactions
+    await Transaction.deleteMany({ product: req.params.id });
     
-    res.json({ message: 'Product removed' });
+    res.json({ message: 'Product deleted successfully' });
   } catch (error) {
-    console.error(error);
+    console.error('Error in deleteProduct:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

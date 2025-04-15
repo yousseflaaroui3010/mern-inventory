@@ -1,557 +1,308 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import {
   Box,
-  Paper,
-  Typography,
-  TextField,
   Button,
-  FormControl,
-  InputLabel,
+  TextField,
   Select,
   MenuItem,
+  FormControl,
+  InputLabel,
+  Typography,
+  Paper,
+  Alert,
   Grid,
-  FormHelperText,
   InputAdornment,
-  Divider,
-  Alert
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Chip,
+  CircularProgress
 } from '@mui/material';
-import { Save as SaveIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
-import InventoryContext from '../../context/InventoryContext';
-import Loader from '../layout/Loader';
+import AddIcon from '@mui/icons-material/Add';
+import { useNavigate } from 'react-router-dom';
+import { useCategories } from '../../contexts/CategoryContext';
 import axios from '../../utils/axiosConfig';
 
-const ProductForm = () => {
-  const { id } = useParams();
+const DEFAULT_CATEGORIES = [
+  'Clothes',
+  'Electronics',
+  'Books',
+  'Accessories',
+  'Bags',
+  'Beauty',
+  'Furniture',
+  'Food',
+  'Sports',
+  'Toys',
+  'Other'
+];
+
+const ProductForm = ({ initialValues = {}, onSubmit, isEdit = false }) => {
   const navigate = useNavigate();
-  const { categories, suppliers, fetchCategories, fetchSuppliers } = useContext(InventoryContext);
-  
-  const [product, setProduct] = useState({
+  const [formData, setFormData] = useState({
     name: '',
     description: '',
-    sku: '',
     category: '',
-    quantity: 0,
-    unitOfMeasure: 'piece',
-    unitPrice: 0,
+    quantity: '',
+    unitPrice: '',
     currency: 'MAD',
-    costPrice: 0,
-    minStockLevel: 0,
-    location: '',
-    supplier: '',
-    barcode: '',
-    isActive: true
+    unitOfMeasure: 'piece',
+    ...initialValues
   });
-  
-  const [image, setImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
+
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [validationErrors, setValidationErrors] = useState({});
-  const [isEditing, setIsEditing] = useState(false);
-  
-  // Units of measure options
-  const unitOptions = [
-    { value: 'piece', label: 'Piece' },
-    { value: 'kg', label: 'Kilogram (kg)' },
-    { value: 'g', label: 'Gram (g)' },
-    { value: 'mg', label: 'Milligram (mg)' },
-    { value: 'L', label: 'Liter (L)' },
-    { value: 'ml', label: 'Milliliter (ml)' },
-    { value: 'box', label: 'Box' },
-    { value: 'pack', label: 'Pack' },
-    { value: 'set', label: 'Set' },
-    { value: 'pair', label: 'Pair' },
-    { value: 'other', label: 'Other' }
-  ];
-  
-  // Currency options
-  const currencyOptions = [
-    { value: 'MAD', label: 'Moroccan Dirham (MAD)' },
-    { value: 'USD', label: 'US Dollar (USD)' },
-    { value: 'EUR', label: 'Euro (EUR)' },
-    { value: 'GBP', label: 'British Pound (GBP)' },
-    { value: 'CAD', label: 'Canadian Dollar (CAD)' },
-    { value: 'AUD', label: 'Australian Dollar (AUD)' }
-  ];
-  
-  // Fetch categories and suppliers if not already loaded
-  useEffect(() => {
-    if (categories.length === 0) {
-      fetchCategories();
-    }
-    
-    if (suppliers.length === 0) {
-      fetchSuppliers();
-    }
-  }, [categories, suppliers, fetchCategories, fetchSuppliers]);
-  
-  // Fetch product if editing
-  useEffect(() => {
-    const fetchProduct = async () => {
-      if (id) {
-        setIsEditing(true);
-        setLoading(true);
-        
-        try {
-          const response = await axios.get(`/products/${id}`);
-          const productData = response.data;
-          
-          setProduct({
-            name: productData.name || '',
-            description: productData.description || '',
-            sku: productData.sku || '',
-            category: productData.category?._id || '',
-            quantity: productData.quantity || 0,
-            unitOfMeasure: productData.unitOfMeasure || 'piece',
-            unitPrice: productData.unitPrice || 0,
-            currency: productData.currency || 'MAD',
-            costPrice: productData.costPrice || 0,
-            minStockLevel: productData.minStockLevel || 0,
-            location: productData.location || '',
-            supplier: productData.supplier?._id || '',
-            barcode: productData.barcode || '',
-            isActive: productData.isActive === undefined ? true : productData.isActive
-          });
-          
-          if (productData.imageUrl) {
-            setImagePreview(productData.imageUrl);
-          }
-          
-          setLoading(false);
-        } catch (err) {
-          setError('Error fetching product data');
-          setLoading(false);
-        }
-      }
-    };
-    
-    fetchProduct();
-  }, [id]);
-  
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+  const [submitError, setSubmitError] = useState('');
+
+  const { categories, addCategory } = useCategories();
+
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    
-    setProduct({
-      ...product,
-      [name]: type === 'checkbox' ? checked : value
-    });
-    
-    // Clear validation error when field is edited
-    if (validationErrors[name]) {
-      setValidationErrors({
-        ...validationErrors,
-        [name]: ''
-      });
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
-  
-  const handleImageChange = (e) => {
-    const selectedFile = e.target.files[0];
-    
-    if (selectedFile) {
-      setImage(selectedFile);
-      setImagePreview(URL.createObjectURL(selectedFile));
-    }
-  };
-  
+
   const validateForm = () => {
-    const errors = {};
+    const newErrors = {};
+    if (!formData.name) newErrors.name = 'Name is required';
+    if (!formData.unitPrice) newErrors.unitPrice = 'Unit price is required';
+    if (formData.unitPrice < 0) newErrors.unitPrice = 'Price cannot be negative';
+    if (formData.quantity < 0) newErrors.quantity = 'Quantity cannot be negative';
     
-    if (!product.name.trim()) {
-      errors.name = 'Product name is required';
-    }
-    
-    if (!product.sku.trim()) {
-      errors.sku = 'SKU is required';
-    }
-    
-    if (!product.category) {
-      errors.category = 'Category is required';
-    }
-    
-    if (product.unitPrice < 0) {
-      errors.unitPrice = 'Price cannot be negative';
-    }
-    
-    if (product.costPrice < 0) {
-      errors.costPrice = 'Cost price cannot be negative';
-    }
-    
-    if (product.minStockLevel < 0) {
-      errors.minStockLevel = 'Minimum stock level cannot be negative';
-    }
-    
-    setValidationErrors(errors);
-    
-    return Object.keys(errors).length === 0;
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
     
     setLoading(true);
-    setError('');
-    
+    setSubmitError('');
+
     try {
-      // Create FormData for file upload
-      const formData = new FormData();
-      
-      // Add product data
-      Object.keys(product).forEach(key => {
-        formData.append(key, product[key]);
-      });
-      
-      // Add image if selected
-      if (image) {
-        formData.append('image', image);
-      }
-      
-      if (isEditing) {
-        // Update existing product
-        await axios.put(`/products/${id}`, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
+      const productData = {
+        ...formData,
+        unitPrice: parseFloat(formData.unitPrice),
+        quantity: parseInt(formData.quantity)
+      };
+
+      if (isEdit) {
+        await axios.put(`/products/${initialValues._id}`, productData);
       } else {
-        // Create new product
-        await axios.post('/products', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
+        await axios.post('/products', productData);
       }
       
       navigate('/products');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error saving product');
+    } catch (error) {
+      setSubmitError(error.response?.data?.message || 'Error saving product. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
-  
-  if (loading && !product.name) {
-    return <Loader message="Loading product data..." />;
-  }
-  
+
+  const handleAddCategory = async () => {
+    if (!newCategory.trim()) return;
+    try {
+      const category = await addCategory({ name: newCategory });
+      setFormData(prev => ({ ...prev, category: category._id }));
+      setShowAddCategory(false);
+      setNewCategory('');
+    } catch (error) {
+      setErrors(prev => ({ ...prev, category: error.message }));
+    }
+  };
+
+  const handleQuickAddCategory = async (categoryName) => {
+    try {
+      const category = await addCategory({ name: categoryName });
+      setFormData(prev => ({ ...prev, category: category._id }));
+    } catch (error) {
+      setErrors(prev => ({ ...prev, category: error.message }));
+    }
+  };
+
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
-          {isEditing ? 'Edit Product' : 'Add New Product'}
+    <Paper elevation={3} sx={{ p: 3, borderRadius: 2, bgcolor: '#fff' }}>
+      <form onSubmit={handleSubmit}>
+        {submitError && (
+          <Alert severity="error" sx={{ mb: 2, borderRadius: 1 }}>
+            {submitError}
+          </Alert>
+        )}
+
+        <Typography variant="h6" gutterBottom color="primary">
+          {isEdit ? 'Edit Product' : 'Add New Product'}
         </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/products')}
-        >
-          Back to Products
-        </Button>
-      </Box>
-      
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
-      
-      <Paper elevation={3} sx={{ p: 3 }}>
-        <form onSubmit={handleSubmit}>
-          <Grid container spacing={3}>
-            {/* Basic Information */}
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
-                Basic Information
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Product Name"
-                name="name"
-                value={product.name}
-                onChange={handleChange}
-                error={!!validationErrors.name}
-                helperText={validationErrors.name}
-                required
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="SKU (Stock Keeping Unit)"
-                name="sku"
-                value={product.sku}
-                onChange={handleChange}
-                error={!!validationErrors.sku}
-                helperText={validationErrors.sku}
-                required
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
-                name="description"
-                value={product.description}
-                onChange={handleChange}
-                multiline
-                rows={3}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth error={!!validationErrors.category} required>
-                <InputLabel id="category-label">Category</InputLabel>
-                <Select
-                  labelId="category-label"
-                  name="category"
-                  value={product.category}
-                  onChange={handleChange}
-                  label="Category"
-                >
-                  {categories.map(category => (
-                    <MenuItem key={category._id} value={category._id}>
-                      {category.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {validationErrors.category && (
-                  <FormHelperText>{validationErrors.category}</FormHelperText>
-                )}
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel id="supplier-label">Supplier</InputLabel>
-                <Select
-                  labelId="supplier-label"
-                  name="supplier"
-                  value={product.supplier}
-                  onChange={handleChange}
-                  label="Supplier"
-                >
-                  <MenuItem value="">None</MenuItem>
-                  {suppliers.map(supplier => (
-                    <MenuItem key={supplier._id} value={supplier._id}>
-                      {supplier.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            {/* Stock Information */}
-            <Grid item xs={12} sx={{ mt: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Stock Information
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-            </Grid>
-            
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Quantity"
-                name="quantity"
-                value={product.quantity}
-                onChange={handleChange}
-                InputProps={{
-                  inputProps: { min: 0, step: 1 }
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel id="unit-label">Unit of Measure</InputLabel>
-                <Select
-                  labelId="unit-label"
-                  name="unitOfMeasure"
-                  value={product.unitOfMeasure}
-                  onChange={handleChange}
-                  label="Unit of Measure"
-                >
-                  {unitOptions.map(option => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Minimum Stock Level"
-                name="minStockLevel"
-                value={product.minStockLevel}
-                onChange={handleChange}
-                error={!!validationErrors.minStockLevel}
-                helperText={validationErrors.minStockLevel}
-                InputProps={{
-                  inputProps: { min: 0, step: 1 }
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Storage Location"
-                name="location"
-                value={product.location}
-                onChange={handleChange}
-                placeholder="e.g., Warehouse A, Shelf B3"
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Barcode"
-                name="barcode"
-                value={product.barcode}
-                onChange={handleChange}
-              />
-            </Grid>
-            
-            {/* Pricing Information */}
-            <Grid item xs={12} sx={{ mt: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Pricing Information
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-            </Grid>
-            
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Selling Price"
-                name="unitPrice"
-                value={product.unitPrice}
-                onChange={handleChange}
-                error={!!validationErrors.unitPrice}
-                helperText={validationErrors.unitPrice}
-                InputProps={{
-                  inputProps: { min: 0, step: 0.01 },
-                  startAdornment: <InputAdornment position="start">{product.currency}</InputAdornment>,
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Cost Price"
-                name="costPrice"
-                value={product.costPrice}
-                onChange={handleChange}
-                error={!!validationErrors.costPrice}
-                helperText={validationErrors.costPrice}
-                InputProps={{
-                  inputProps: { min: 0, step: 0.01 },
-                  startAdornment: <InputAdornment position="start">{product.currency}</InputAdornment>,
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel id="currency-label">Currency</InputLabel>
-                <Select
-                  labelId="currency-label"
-                  name="currency"
-                  value={product.currency}
-                  onChange={handleChange}
-                  label="Currency"
-                >
-                  {currencyOptions.map(option => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            {/* Product Image */}
-            <Grid item xs={12} sx={{ mt: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Product Image
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <Button
-                variant="outlined"
-                component="label"
-                fullWidth
-                sx={{ height: '56px' }}
-              >
-                {imagePreview ? 'Change Image' : 'Upload Image'}
-                <input
-                  type="file"
-                  hidden
-                  accept="image/*"
-                  onChange={handleImageChange}
-                />
-              </Button>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              {imagePreview && (
-                <Box
-                  sx={{
-                    height: '150px',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    p: 1
-                  }}
-                >
-                  <img
-                    src={imagePreview}
-                    alt="Product preview"
-                    style={{ maxHeight: '100%', maxWidth: '100%' }}
-                  />
-                </Box>
-              )}
-            </Grid>
-            
-            {/* Submit Button */}
-            <Grid item xs={12} sx={{ mt: 3 }}>
-              <Button
-                type="submit"
-                variant="contained"
-                size="large"
-                startIcon={<SaveIcon />}
-                disabled={loading}
-              >
-                {loading ? 'Saving...' : 'Save Product'}
-              </Button>
-            </Grid>
+
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Product Name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              error={!!errors.name}
+              helperText={errors.name}
+              required
+              autoFocus
+            />
           </Grid>
-        </form>
-      </Paper>
-    </Box>
+
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Description"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              multiline
+              rows={2}
+              placeholder="Optional: Add a brief description of the product"
+            />
+          </Grid>
+
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" gutterBottom>
+              Quick Add Category
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+              {DEFAULT_CATEGORIES.map((cat) => (
+                <Chip
+                  key={cat}
+                  label={cat}
+                  onClick={() => handleQuickAddCategory(cat)}
+                  color="primary"
+                  variant="outlined"
+                  sx={{ cursor: 'pointer' }}
+                />
+              ))}
+            </Box>
+            
+            <FormControl fullWidth>
+              <InputLabel>Category</InputLabel>
+              <Select
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                endAdornment={
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowAddCategory(true)}
+                      edge="end"
+                      size="small"
+                    >
+                      <AddIcon />
+                    </IconButton>
+                  </InputAdornment>
+                }
+              >
+                {categories.map(category => (
+                  <MenuItem key={category._id} value={category._id}>
+                    {category.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Unit Price"
+              name="unitPrice"
+              type="number"
+              value={formData.unitPrice}
+              onChange={handleChange}
+              error={!!errors.unitPrice}
+              helperText={errors.unitPrice}
+              required
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    {formData.currency}
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Initial Quantity"
+              name="quantity"
+              type="number"
+              value={formData.quantity}
+              onChange={handleChange}
+              error={!!errors.quantity}
+              helperText={errors.quantity || 'Optional: Set initial stock quantity'}
+            />
+          </Grid>
+        </Grid>
+
+        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={() => navigate('/products')}
+            sx={{ minWidth: 120 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            fullWidth
+            disabled={loading}
+            sx={{
+              mt: 3,
+              py: 1.5,
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              borderRadius: 2
+            }}
+          >
+            {loading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              isEdit ? 'Update Product' : 'Create Product'
+            )}
+          </Button>
+        </Box>
+      </form>
+
+      <Dialog open={showAddCategory} onClose={() => setShowAddCategory(false)}>
+        <DialogTitle>Add Custom Category</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Category Name"
+            fullWidth
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+            placeholder="Enter a custom category name"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowAddCategory(false)}>Cancel</Button>
+          <Button onClick={handleAddCategory} color="primary">
+            Add
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Paper>
   );
 };
 

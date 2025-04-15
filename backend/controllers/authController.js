@@ -52,30 +52,41 @@ exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check for user email
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Please provide email and password' });
+    }
+
+    // Check for user email and explicitly include password
     const user = await User.findOne({ email }).select('+password');
 
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     // Check if password matches
     const isMatch = await user.matchPassword(password);
 
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      console.log('Password mismatch for user:', email);
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
+
+    // Generate token and send response
+    const token = generateToken(user._id);
 
     res.json({
       _id: user._id,
       username: user.username,
       email: user.email,
       role: user.role,
-      token: generateToken(user._id),
+      token
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Login error:', error);
+    res.status(500).json({ 
+      message: 'An error occurred during login',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
@@ -99,5 +110,18 @@ exports.getUserProfile = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// @desc    Get all users (for debugging)
+// @route   GET /api/users/debug
+// @access  Public
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select('-password');
+    res.json(users);
+  } catch (error) {
+    console.error('Error getting users:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };

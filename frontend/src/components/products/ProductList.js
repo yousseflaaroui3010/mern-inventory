@@ -19,14 +19,16 @@ import {
   FormControl,
   InputLabel,
   TablePagination,
-  Chip
+  Chip,
+  Alert
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Search as SearchIcon,
-  Warning as WarningIcon
+  Warning as WarningIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import AuthContext from '../../context/AuthContext';
 import InventoryContext from '../../context/InventoryContext';
@@ -57,44 +59,55 @@ const ProductList = () => {
     }
   }, [location.search]);
   
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Build query parameters
+      const params = {
+        page: page + 1,
+        limit: rowsPerPage
+      };
+      
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      
+      if (categoryFilter) {
+        params.category = categoryFilter;
+      }
+      
+      if (stockFilter) {
+        params.stockFilter = stockFilter;
+      }
+      
+      console.log('Fetching products with params:', params);
+      
+      const response = await axios.get('/products', { params });
+      console.log('Products response:', response.data);
+      
+      if (response.data && response.data.data) {
+        setProducts(response.data.data);
+        setTotalProducts(response.data.count);
+      } else {
+        setError('Invalid data format received from server');
+        setProducts([]);
+        setTotalProducts(0);
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setError(err.response?.data?.message || 'Error fetching products');
+      setProducts([]);
+      setTotalProducts(0);
+      setLoading(false);
+    }
+  };
+
   // Fetch products with filters
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        
-        // Build query parameters
-        const params = {
-          page: page + 1,
-          limit: rowsPerPage
-        };
-        
-        if (searchTerm) {
-          params.search = searchTerm;
-        }
-        
-        if (categoryFilter) {
-          params.category = categoryFilter;
-        }
-        
-        // Handle stock filter
-        if (stockFilter === 'low') {
-          const response = await axios.get('/products/low-stock');
-          setProducts(response.data);
-          setTotalProducts(response.data.length);
-        } else {
-          const response = await axios.get('/products', { params });
-          setProducts(response.data.data);
-          setTotalProducts(response.data.count);
-        }
-        
-        setLoading(false);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Error fetching products');
-        setLoading(false);
-      }
-    };
-    
     fetchProducts();
   }, [page, rowsPerPage, searchTerm, categoryFilter, stockFilter]);
   
@@ -115,13 +128,20 @@ const ProductList = () => {
   };
   
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
+    if (window.confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
       try {
+        setLoading(true);
         await axios.delete(`/products/${id}`);
-        // Refresh product list
+        // Remove the product from the local state
         setProducts(products.filter(product => product._id !== id));
+        setTotalProducts(prev => prev - 1);
+        // Show success message using error state temporarily
+        setError('Product successfully deleted');
+        setTimeout(() => setError(null), 3000);
       } catch (error) {
-        setError('Error deleting product');
+        setError(error.response?.data?.message || 'Error deleting product');
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -151,6 +171,10 @@ const ProductList = () => {
     // Update URL to remove any query parameters
     navigate('/products');
   };
+
+  const handleRefresh = () => {
+    fetchProducts();
+  };
   
   if (loading && page === 0) {
     return <Loader message="Loading products..." />;
@@ -159,30 +183,61 @@ const ProductList = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
+        <Typography variant="h4" component="h1" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
           Products
         </Typography>
-{isManager && (
-  <Button
-  variant="contained"
-  startIcon={<AddIcon />}
-  component={Link}
-  to="/products/new"
->
-  Add Product
-</Button>
-)}
-    </Box>
-      {/* Filters */}
-      <Paper elevation={3} sx={{ p: 2, mb: 3 }}>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
-          <TextField
-            label="Search Products"
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
             variant="outlined"
-            size="small"
+            startIcon={<RefreshIcon />}
+            onClick={handleRefresh}
+            sx={{ borderRadius: 2 }}
+          >
+            Refresh
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            component={Link}
+            to="/products/new"
+            sx={{
+              backgroundColor: 'primary.main',
+              '&:hover': {
+                backgroundColor: 'primary.dark',
+              },
+              borderRadius: 2,
+              px: 3
+            }}
+          >
+            Add Product
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Filters */}
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: 3, 
+          mb: 3,
+          borderRadius: 2,
+          backgroundColor: 'background.paper'
+        }}
+      >
+        <Box sx={{ 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: 2, 
+          alignItems: 'center',
+          mb: 2
+        }}>
+          <TextField
+            placeholder="Search products..."
             value={searchTerm}
             onChange={handleSearchChange}
-            sx={{ minWidth: 200, flexGrow: 1 }}
+            variant="outlined"
+            size="small"
+            sx={{ flexGrow: 1, minWidth: 200 }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -191,134 +246,139 @@ const ProductList = () => {
               ),
             }}
           />
-          
-          <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel id="category-filter-label">Category</InputLabel>
+
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>Category</InputLabel>
             <Select
-              labelId="category-filter-label"
-              id="category-filter"
               value={categoryFilter}
-              label="Category"
               onChange={handleCategoryChange}
+              label="Category"
             >
               <MenuItem value="">All Categories</MenuItem>
-              {categories.map(category => (
+              {categories.map((category) => (
                 <MenuItem key={category._id} value={category._id}>
                   {category.name}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
-          
-          <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel id="stock-filter-label">Stock Level</InputLabel>
+
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>Stock Level</InputLabel>
             <Select
-              labelId="stock-filter-label"
-              id="stock-filter"
               value={stockFilter}
-              label="Stock Level"
               onChange={handleStockFilterChange}
+              label="Stock Level"
             >
-              <MenuItem value="">All Products</MenuItem>
+              <MenuItem value="">All Stock</MenuItem>
               <MenuItem value="low">Low Stock</MenuItem>
+              <MenuItem value="out">Out of Stock</MenuItem>
+              <MenuItem value="in">In Stock</MenuItem>
             </Select>
           </FormControl>
-          
-          <Button variant="outlined" size="small" onClick={clearFilters}>
-            Clear Filters
-          </Button>
+
+          {(searchTerm || categoryFilter || stockFilter) && (
+            <Button
+              variant="outlined"
+              onClick={clearFilters}
+              size="small"
+            >
+              Clear Filters
+            </Button>
+          )}
         </Box>
       </Paper>
-      
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       {/* Products Table */}
-      <TableContainer component={Paper}>
-        <Table sx={{ minWidth: 650 }} aria-label="products table">
+      <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+        <Table>
           <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>SKU</TableCell>
-              <TableCell>Category</TableCell>
-              <TableCell align="right">Stock</TableCell>
-              <TableCell align="right">Price</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="center">Actions</TableCell>
+            <TableRow sx={{ backgroundColor: 'primary.main' }}>
+              <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Name</TableCell>
+              <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>SKU</TableCell>
+              <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Category</TableCell>
+              <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Stock</TableCell>
+              <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Price</TableCell>
+              <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Status</TableCell>
+              <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {products.length > 0 ? (
-              products.map((product) => (
-                <TableRow key={product._id} hover>
-                  <TableCell>
-                    <Link to={`/products/${product._id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                      {product.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{product.sku}</TableCell>
-                  <TableCell>{product.category ? product.category.name : 'Uncategorized'}</TableCell>
-                  <TableCell align="right">
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                      {product.quantity <= product.minStockLevel && (
-                        <WarningIcon color="warning" fontSize="small" sx={{ mr: 1 }} />
-                      )}
-                      {product.quantity} {product.unitOfMeasure}
-                    </Box>
-                  </TableCell>
-                  <TableCell align="right">
-                    {product.currency} {product.unitPrice.toFixed(2)}
-                  </TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={product.isActive ? "Active" : "Inactive"} 
-                      color={product.isActive ? "success" : "default"} 
+            {products.map((product) => (
+              <TableRow 
+                key={product._id}
+                sx={{ '&:hover': { backgroundColor: 'action.hover' } }}
+              >
+                <TableCell>{product.name}</TableCell>
+                <TableCell>{product.sku}</TableCell>
+                <TableCell>{product.category?.name}</TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {product.quantity}
+                    {product.quantity <= (product.minStockLevel || 0) && (
+                      <WarningIcon color="warning" fontSize="small" />
+                    )}
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  {product.unitPrice} {product.currency}
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={product.isActive ? 'Active' : 'Inactive'}
+                    color={product.isActive ? 'success' : 'default'}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <IconButton
+                      onClick={() => navigate(`/products/${product._id}/edit`)}
                       size="small"
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                      {isManager && (
-                        <IconButton 
-                          component={Link} 
-                          to={`/products/${product._id}/edit`}
-                          color="primary"
-                          size="small"
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                      {isManager && (
-                        <IconButton 
-                          color="error" 
-                          size="small"
-                          onClick={() => handleDelete(product._id)}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
+                      color="primary"
+                      title="Edit product"
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      onClick={() => handleDelete(product._id)}
+                      size="small"
+                      color="error"
+                      title="Delete product"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+            {products.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} align="center">
-                  No products found.
+                <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
+                  <Typography variant="body1" color="text.secondary">
+                    No products found
+                  </Typography>
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+        <TablePagination
+          component="div"
+          count={totalProducts}
+          page={page}
+          onPageChange={handleChangePage}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+        />
       </TableContainer>
-      
-      {/* Pagination */}
-      <TablePagination
-        rowsPerPageOptions={[5, 10, 25, 50]}
-        component="div"
-        count={totalProducts}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-      />
     </Box>
   );
 };

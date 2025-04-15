@@ -13,23 +13,22 @@ const productSchema = new mongoose.Schema({
   },
   sku: {
     type: String,
-    required: [true, 'Please add a SKU'],
     unique: true,
-    trim: true
+    trim: true,
+    sparse: true
   },
   category: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Category',
-    required: [true, 'Please add a category']
+    ref: 'Category'
   },
   quantity: {
     type: Number,
-    required: [true, 'Please add a quantity'],
+    default: 0,
     min: [0, 'Quantity cannot be negative']
   },
   unitOfMeasure: {
     type: String,
-    required: [true, 'Please add a unit of measure'],
+    default: 'piece',
     enum: ['piece', 'kg', 'g', 'mg', 'L', 'ml', 'box', 'pack', 'set', 'pair', 'other']
   },
   unitPrice: {
@@ -39,7 +38,6 @@ const productSchema = new mongoose.Schema({
   },
   currency: {
     type: String,
-    required: [true, 'Please specify currency'],
     default: 'MAD',
     enum: ['MAD', 'USD', 'EUR', 'GBP', 'CAD', 'AUD']
   },
@@ -65,10 +63,6 @@ const productSchema = new mongoose.Schema({
   barcode: {
     type: String
   },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
   lastRestockDate: {
     type: Date
   },
@@ -80,11 +74,21 @@ const productSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
+}, {
+  timestamps: true
 });
 
 // Update the "updatedAt" field before saving
 productSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
+  next();
+});
+
+// Auto-generate SKU if not provided
+productSchema.pre('save', function(next) {
+  if (!this.sku) {
+    this.sku = 'SKU-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+  }
   next();
 });
 

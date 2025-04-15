@@ -46,7 +46,18 @@ userSchema.pre('save', async function(next) {
 
 // Match user entered password to hashed password in database
 userSchema.methods.matchPassword = async function(enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+  try {
+    if (!enteredPassword) {
+      console.log('No password provided for comparison');
+      return false;
+    }
+    const isMatch = await bcrypt.compare(enteredPassword, this.password);
+    console.log('Password comparison result:', isMatch);
+    return isMatch;
+  } catch (error) {
+    console.error('Error comparing passwords:', error);
+    return false;
+  }
 };
 
 module.exports = mongoose.model('User', userSchema);
